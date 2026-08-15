@@ -8,13 +8,16 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.smarthome.data.model.FloorPlan
+import com.example.smarthome.util.NotificationHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,6 +25,7 @@ fun FloorPlanListScreen(
     viewModel: FloorPlanListViewModel = hiltViewModel(),
     onFloorPlanSelected: (String) -> Unit
 ) {
+    val context = LocalContext.current
     val floorPlans by viewModel.floorPlans.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
@@ -31,6 +35,14 @@ fun FloorPlanListScreen(
             TopAppBar(
                 title = { Text("Smart Home Floor Plans") },
                 actions = {
+                    IconButton(onClick = { 
+                        NotificationHelper.showNotification(context, "Test Alert", "Hardware notification is working!")
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Test Notification"
+                        )
+                    }
                     IconButton(onClick = { showDeleteAllDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Delete,
