@@ -58,6 +58,13 @@ class DeviceRepository @Inject constructor(
         batch.commit().await()
     }
 
+    suspend fun deleteAllDevices() {
+        val snapshot = firestore.collection("devices").get().await()
+        val batch = firestore.batch()
+        snapshot.documents.forEach { batch.delete(it.reference) }
+        batch.commit().await()
+    }
+
     suspend fun toggleDevice(deviceId: String, currentStatus: DeviceStatus) {
         val newStatus = if (currentStatus == DeviceStatus.ON) DeviceStatus.OFF else DeviceStatus.ON
         val updates = hashMapOf<String, Any?>(

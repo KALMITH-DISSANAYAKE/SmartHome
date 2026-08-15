@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.smarthome.data.model.FloorPlan
 import com.example.smarthome.data.repository.DeviceRepository
 import com.example.smarthome.data.repository.FloorPlanRepository
+import com.example.smarthome.data.repository.UsageRepository
 import com.example.smarthome.data.seeder.FirebaseSeeder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,6 +18,7 @@ import javax.inject.Inject
 class FloorPlanListViewModel @Inject constructor(
     private val repository: FloorPlanRepository,
     private val deviceRepository: DeviceRepository,
+    private val usageRepository: UsageRepository,
     private val seeder: FirebaseSeeder
 ) : ViewModel() {
 
@@ -35,6 +37,14 @@ class FloorPlanListViewModel @Inject constructor(
             deviceRepository.deleteDevicesByFloorPlan(id)
             // Then delete the floor plan
             repository.deleteFloorPlan(id)
+        }
+    }
+
+    fun clearAllData() {
+        viewModelScope.launch {
+            deviceRepository.deleteAllDevices()
+            usageRepository.deleteAllLogs()
+            repository.deleteAllFloorPlans()
         }
     }
 

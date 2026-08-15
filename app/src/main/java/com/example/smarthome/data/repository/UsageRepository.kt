@@ -30,4 +30,11 @@ class UsageRepository @Inject constructor(
             }
         awaitClose { listener.remove() }
     }
+
+    suspend fun deleteAllLogs() {
+        val snapshot = firestore.collection("usageLogs").get().await()
+        val batch = firestore.batch()
+        snapshot.documents.forEach { batch.delete(it.reference) }
+        batch.commit().await()
+    }
 }

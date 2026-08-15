@@ -32,4 +32,11 @@ class FloorPlanRepository @Inject constructor(
     suspend fun deleteFloorPlan(id: String) {
         firestore.collection("floorPlans").document(id).delete().await()
     }
+
+    suspend fun deleteAllFloorPlans() {
+        val snapshot = firestore.collection("floorPlans").get().await()
+        val batch = firestore.batch()
+        snapshot.documents.forEach { batch.delete(it.reference) }
+        batch.commit().await()
+    }
 }

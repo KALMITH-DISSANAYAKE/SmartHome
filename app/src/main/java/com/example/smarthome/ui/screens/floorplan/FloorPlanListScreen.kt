@@ -24,12 +24,20 @@ fun FloorPlanListScreen(
 ) {
     val floorPlans by viewModel.floorPlans.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var showDeleteAllDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Smart Home Floor Plans") },
                 actions = {
+                    IconButton(onClick = { showDeleteAllDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Clear All",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                     IconButton(onClick = { viewModel.seedDemoData() }) {
                         Icon(
                             imageVector = Icons.Default.CloudUpload,
@@ -74,7 +82,37 @@ fun FloorPlanListScreen(
                 }
             )
         }
+
+        if (showDeleteAllDialog) {
+            DeleteAllConfirmDialog(
+                onDismiss = { showDeleteAllDialog = false },
+                onConfirm = {
+                    viewModel.clearAllData()
+                    showDeleteAllDialog = false
+                }
+            )
+        }
     }
+}
+
+@Composable
+fun DeleteAllConfirmDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Factory Reset") },
+        text = { Text("This will permanently delete all floor plans, devices, and usage logs. Are you sure?") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Delete Everything", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
