@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Hardware Simulator</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 24px;
+        }
+        h1 { margin-bottom: 24px; color: #38bdf8; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .device-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #334155;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .device-card.on { border-color: #22c55e; box-shadow: 0 0 20px rgba(34,197,94,0.2); }
+        .device-card.off { border-color: #64748b; }
+        .device-card.error { border-color: #ef4444; animation: pulse 1.5s infinite; }
+        .device-card.disconnected { border-color: #f59e0b; opacity: 0.7; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .status-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            position: absolute; top: 12px; right: 12px;
+        }
+        .on .status-dot { background: #22c55e; }
+        .off .status-dot { background: #64748b; }
+        .error .status-dot { background: #ef4444; }
+        .disconnected .status-dot { background: #f59e0b; }
+        .type-icon { font-size: 32px; margin-bottom: 8px; }
+        .device-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .device-meta { font-size: 12px; color: #94a3b8; }
+        .power-bar {
+            height: 4px; background: #334155; border-radius: 2px;
+            margin-top: 12px; overflow: hidden;
+        }
+        .power-fill {
+            height: 100%; background: #38bdf8; border-radius: 2px;
+            transition: width 0.5s;
+        }
+        .switches { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .switch-pill {
+            padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+            background: #334155; color: #94a3b8;
+        }
+        .switch-pill.active { background: #22c55e; color: #fff; }
+        .timer {
+            margin-top: 8px; font-size: 12px;
+            font-family: monospace; color: #f87171;
+        }
+        .log {
+            margin-top: 24px; padding: 16px; background: #1e293b;
+            border-radius: 8px; max-height: 200px; overflow-y: auto;
+            font-family: monospace; font-size: 12px; color: #94a3b8;
+        }
+        .log-entry { margin-bottom: 4px; padding: 2px 0; border-bottom: 1px solid #334155; }
+    </style>
+</head>
+<body>
+    <h1>🏠 Smart Home Hardware Simulator</h1>
+    <div class="grid" id="deviceGrid"></div>
+    <div class="log" id="eventLog"><div class="log-entry">Waiting for Firestore...</div></div>
+
+    <script>
+        // REPLACE WITH YOUR FIREBASE CONFIG
+      const firebaseConfig = {
+          apiKey: "AIzaSyA9oFs5cenD8HxafvX_UUEIcBCwdpGIi7s",
+          authDomain: "smarthome-demo-24bb3.firebaseapp.com",
+          projectId: "smarthome-demo-24bb3",
+          storageBucket: "smarthome-demo-24bb3.firebasestorage.app",
+          messagingSenderId: "189831222116",
+          appId: "1:189831222116:web:11b3ba2ba0882cdf6f2071",
+          measurementId: "G-VRCE5T7FLW"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const grid = document.getElementById('deviceGrid');
+        const log = document.getElementById('eventLog');
+        const devicesMap = new Map();
+
+        function addLog(msg) {
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            log.prepend(div);
+            if (log.children.length > 50) log.lastChild.remove();
+        }
+
+        function renderDevice(doc) {
+            const d = doc.data();
+            const id = doc.id;
+            const status = d.status?.toLowerCase() || 'off';
+            const prev = devicesMap.get(id);
+            if (prev && prev.status !== status) {
+                addLog(`${d.name}: ${prev.status} → ${status.toUpperCase()}`);
+            }
+            devicesMap.set(id, { status, data: d });
+
+            let switchesHtml = '';
+            if (d.type === 'MULTI_SWITCH' && d.switchStates) {
+                switchesHtml = '<div class="switches">' + d.switchStates.map((s, i) =>
+                    `<span class="switch-pill ${s ? 'active' : ''}">S${i+1}</span>`
+                ).join('') + '</div>';
+            }
+
+            let timerHtml = '';
+            if (d.type === 'IRON' && status === 'on' && d.currentSessionStart) {
+                const elapsed = Math.floor((Date.now() - d.currentSessionStart) / 60000);
+                const remaining = (d.maxOnDuration || 30) - elapsed;
+                timerHtml = `<div class="timer">⏱ ${elapsed}m elapsed | ${remaining}m remaining</div>`;
+            }
+
+            let cameraHtml = '';
+            if (d.type === 'CAMERA') {
+                cameraHtml = `<div style="margin-top:8px;padding:8px;background:#0f172a;border-radius:6px;text-align:center;font-size:11px;color:#64748b;">
+                    ${d.cameraMockUri ? '📡 ' + d.cameraMockUri : 'No Signal'}
+                </div>`;
+            }
+
+            const icons = {
+                OUTLET: '🔌', MULTI_SWITCH: '🔲', LIGHT: '💡',
+                IRON: '🔥', CAMERA: '📷'
+            };
+
+            const card = document.createElement('div');
+            card.className = `device-card ${status}`;
+            card.innerHTML = `
+                <div class="status-dot"></div>
+                <div class="type-icon">${icons[d.type] || '⚡'}</div>
+                <div class="device-name">${d.name || 'Unnamed'}</div>
+                <div class="device-meta">${d.type} • (${d.x}, ${d.y}) • ${d.powerRating || 0}W</div>
+                <div class="power-bar"><div class="power-fill" style="width:${status==='on'? '100%' : '0%'}"></div></div>
+                ${switchesHtml}
+                ${timerHtml}
+                ${cameraHtml}
+            `;
+
+            const existing = document.getElementById('dev-' + id);
+            if (existing) existing.replaceWith(card);
+            else grid.appendChild(card);
+            card.id = 'dev-' + id;
+        }
+
+        function removeDevice(id) {
+            const el = document.getElementById('dev-' + id);
+            if (el) el.remove();
+            devicesMap.delete(id);
+            addLog(`Device ${id} removed`);
+        }
+
+        db.collection('devices').onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+                if (change.type === 'removed') removeDevice(change.doc.id);
+                else renderDevice(change.doc);
+            });
+        });
+
+        // FREE TIER SAFETY GUARD: Runs every 10 seconds in the browser
+        setInterval(async () => {
+            const now = Date.now();
+            for (const [id, entry] of devicesMap) {
+                const d = entry.data;
+                const type = (d.type || "").toUpperCase();
+                const status = (d.status || "").toUpperCase();
+
+                if (type === 'IRON' && status === 'ON' && d.currentSessionStart) {
+                    const elapsedMin = (now - d.currentSessionStart) / 60000;
+                    const max = d.maxOnDuration || 30;
+
+                    console.log(`[Safety Guard] Checking ${d.name}: ${elapsedMin.toFixed(2)}m / ${max}m`);
+
+                    if (elapsedMin >= max) {
+                        console.log(`[Safety Guard] CUTOFF TRIGGERED for ${d.name}`);
+                        addLog(`⚠️ SAFETY GUARD: ${d.name} exceeded ${max}m. Auto-shutting off...`);
+
+                        try {
+                            // Update device status
+                            await db.collection('devices').doc(id).update({
+                                status: 'OFF',
+                                currentSessionStart: null,
+                                lastUpdated: now
+                            });
+
+                            // Log to usage logs
+                            await db.collection('usageLogs').add({
+                                deviceId: id,
+                                deviceName: d.name,
+                                action: 'SAFETY_CUTOFF',
+                                timestamp: now,
+                                details: `Auto-turned OFF by Simulator after ${Math.floor(elapsedMin)} min`
+                            });
+                        } catch (e) {
+                            console.error("Safety guard error:", e);
+                        }
+                    }
+                }
+            }
+        }, 10000);
+
+        addLog('Simulator connected to Firestore (Free Tier Safety Active)');
+    </script>
+</body>
+</html>
