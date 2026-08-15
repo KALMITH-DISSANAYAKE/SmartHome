@@ -3,14 +3,14 @@ package com.example.smarthome.worker
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.smarthome.data.model.DeviceStatus
+import com.example.smarthome.util.NotificationHelper
 import com.example.smarthome.util.TimeUtils
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
 
 class LightScheduleWorker(
-    context: Context,
+    private val context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
@@ -29,6 +29,7 @@ class LightScheduleWorker(
             devices.documents.forEach { doc ->
                 val type = doc.getString("type")
                 val currentStatus = doc.getString("status") ?: "OFF"
+                val name = doc.getString("name") ?: "Device"
 
                 // 1. Light Scheduling
                 if (type == "LIGHT") {
@@ -51,15 +52,24 @@ class LightScheduleWorker(
                     val elapsedMin = (now - start) / 60000
                     if (elapsedMin >= max) {
                         batch.update(doc.reference, mapOf("status" to "OFF", "currentSessionStart" to null, "lastUpdated" to now))
-                        // Also log usage
+                        
+                        // Log usage
                         val logRef = firestore.collection("usageLogs").document()
                         batch.set(logRef, mapOf(
                             "deviceId" to doc.id,
-                            "deviceName" to (doc.getString("name") ?: "Iron"),
+                            "deviceName" to name,
                             "action" to "SAFETY_CUTOFF",
                             "timestamp" to now,
                             "details" to "Auto-turned OFF by App Worker after ${elapsedMin} min"
                         ))
+
+                        // TRIGGER LOCAL NOTIFICATION from background!
+                        NotificationHelper.showNotification(
+                            context = context,
+                            title = "Safety Alert",
+                            body = "$name was auto-turned OFF after exceeding limit.",
+                            deviceId = doc.id
+                        )
                         changes++
                     }
                 }
