@@ -123,7 +123,7 @@
             if (d.type === 'IRON' && status === 'on' && d.currentSessionStart) {
                 const elapsed = Math.floor((Date.now() - d.currentSessionStart) / 60000);
                 const remaining = (d.maxOnDuration || 30) - elapsed;
-                timerHtml = `<div class="timer">⏱ ${elapsed}m elapsed | ${remaining}m remaining</div>`;
+                timerHtml = `<div class="timer" id="timer-${id}">⏱ ${elapsed}m elapsed | ${remaining}m remaining</div>`;
             }
 
             let cameraHtml = '';
@@ -214,6 +214,27 @@
         }, 10000);
 
         addLog('Simulator connected to Firestore (Free Tier Safety Active)');
+
+        // UI TIMER UPDATE: Refresh timer displays every 5 seconds
+        setInterval(() => {
+            for (const [id, entry] of devicesMap) {
+                const d = entry.data;
+                const timerEl = document.getElementById(`timer-${id}`);
+                if (timerEl && d.type === 'IRON' && d.status?.toLowerCase() === 'on' && d.currentSessionStart) {
+                    const elapsedSec = Math.floor((Date.now() - d.currentSessionStart) / 1000);
+                    const elapsedMin = Math.floor(elapsedSec / 60);
+                    const secRemainder = elapsedSec % 60;
+
+                    const maxSec = (d.maxOnDuration || 30) * 60;
+                    const remainingTotalSec = Math.max(0, maxSec - elapsedSec);
+                    const remainingMin = Math.floor(remainingTotalSec / 60);
+                    const remainingSec = remainingTotalSec % 60;
+
+                    timerEl.textContent = `⏱ ${elapsedMin}m ${secRemainder}s elapsed | ${remainingMin}m ${remainingSec}s left`;
+                    if (elapsedSec >= maxSec) timerEl.style.color = '#ef4444';
+                }
+            }
+        }, 1000);
     </script>
 </body>
 </html>
