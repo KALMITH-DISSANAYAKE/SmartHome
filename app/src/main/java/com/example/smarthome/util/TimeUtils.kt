@@ -4,7 +4,10 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 object TimeUtils {
-    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private val timeZone = TimeZone.getTimeZone("Asia/Colombo")
+    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault()).apply {
+        timeZone = this@TimeUtils.timeZone
+    }
 
     fun parseTime(timeStr: String): Date? {
         return try {
@@ -17,16 +20,16 @@ object TimeUtils {
     fun isCurrentTimeInRange(startTime: String?, endTime: String?): Boolean {
         if (startTime.isNullOrBlank() || endTime.isNullOrBlank()) return false
 
-        val now = Calendar.getInstance()
+        val now = Calendar.getInstance(timeZone)
         val start = parseTime(startTime)?.let {
-            Calendar.getInstance().apply {
+            Calendar.getInstance(timeZone).apply {
                 time = it
                 set(now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH))
             }
         } ?: return false
 
         val end = parseTime(endTime)?.let {
-            Calendar.getInstance().apply {
+            Calendar.getInstance(timeZone).apply {
                 time = it
                 set(now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH))
             }
@@ -35,8 +38,7 @@ object TimeUtils {
         return now.timeInMillis in start.timeInMillis..end.timeInMillis
     }
 
-    fun formatDuration(millis: Long): String {
-        val minutes = millis / 60000
+    fun formatDuration(minutes: Int): String {
         val hours = minutes / 60
         val mins = minutes % 60
         return if (hours > 0) "${hours}h ${mins}m" else "${mins}m"

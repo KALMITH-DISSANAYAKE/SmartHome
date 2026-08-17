@@ -9,15 +9,20 @@ import com.example.smarthome.data.model.UsageLog
 import com.example.smarthome.data.repository.DeviceRepository
 import com.example.smarthome.data.repository.UsageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.content.Context
+import com.example.smarthome.data.model.DeviceType
+import com.example.smarthome.util.AlarmScheduler
 
 @HiltViewModel
 class DeviceDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val deviceRepository: DeviceRepository,
-    private val usageRepository: UsageRepository
+    private val usageRepository: UsageRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val deviceId: String = savedStateHandle.get<String>("deviceId") ?: ""
@@ -29,6 +34,14 @@ class DeviceDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val current = device.value ?: return@launch
             deviceRepository.toggleDevice(current.id, current.status)
+            
+            if (current.type == DeviceType.IRON) {
+                if (current.status == DeviceStatus.OFF) { // About to turn ON
+                    AlarmScheduler.scheduleIronCutoff(context, current.id, current.name, current.maxOnDuration)
+                } else { // About to turn OFF
+                    AlarmScheduler.cancelIronCutoff(context, current.id)
+                }
+            }
         }
     }
 
@@ -36,6 +49,14 @@ class DeviceDetailViewModel @Inject constructor(
         viewModelScope.launch {
             deviceRepository.updateDeviceField(deviceId, "scheduleOnTime", onTime ?: "")
             deviceRepository.updateDeviceField(deviceId, "scheduleOffTime", offTime ?: "")
+            
+            if (!onTime.isNullOrBlank()) {
+                AlarmScheduler.scheduleLightAlarm(context, deviceId, onTime, true)
+            }
+            if (!offTime.isNullOrBlank()) {
+                AlarmScheduler.scheduleLightAlarm(context, deviceId, offTime, false)
+            }
+            
             usageRepository.logUsage(
                 UsageLog(
                     deviceId = deviceId,

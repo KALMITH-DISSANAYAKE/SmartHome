@@ -19,6 +19,8 @@ import com.example.smarthome.data.model.Device
 import com.example.smarthome.data.model.DeviceStatus
 import com.example.smarthome.data.model.DeviceType
 import com.example.smarthome.ui.screens.dashboard.*
+import com.example.smarthome.ui.components.TimeSelector
+import com.example.smarthome.ui.components.DurationSelector
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -206,8 +208,6 @@ fun IronDetailCard(
     device: Device,
     onUpdateDuration: (Int) -> Unit
 ) {
-    var durationText by remember { mutableStateOf(device.maxOnDuration.toString()) }
-
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Safety Settings", style = MaterialTheme.typography.titleMedium)
@@ -218,19 +218,14 @@ fun IronDetailCard(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            OutlinedTextField(
-                value = durationText,
-                onValueChange = { durationText = it },
-                label = { Text("Max On Duration (minutes)") },
-                trailingIcon = {
-                    IconButton(onClick = {
-                        durationText.toIntOrNull()?.let { onUpdateDuration(it) }
-                    }) {
-                        Icon(Icons.Default.Save, "Save")
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                DurationSelector(
+                    label = "Max On Duration",
+                    durationMinutes = device.maxOnDuration,
+                    onDurationSelected = { onUpdateDuration(it) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }
@@ -251,18 +246,22 @@ fun LightScheduleCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = onText,
-                    onValueChange = { onText = it },
-                    label = { Text("Turn ON at (HH:mm)") },
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedTextField(
-                    value = offText,
-                    onValueChange = { offText = it },
-                    label = { Text("Turn OFF at (HH:mm)") },
-                    modifier = Modifier.weight(1f)
-                )
+                Box(modifier = Modifier.weight(1f)) {
+                    TimeSelector(
+                        label = "Turn ON at",
+                        time = onText,
+                        onTimeSelected = { onText = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    TimeSelector(
+                        label = "Turn OFF at",
+                        time = offText,
+                        onTimeSelected = { offText = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))

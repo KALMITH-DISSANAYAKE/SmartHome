@@ -1,17 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow authenticated users full access for demo
-    // In production, replace with proper auth checks
+    // Development mode: Allow public access for demo
+    // WARNING: In production, replace with proper auth checks
     match /floorPlans/{doc} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
     match /devices/{doc} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
     match /usageLogs/{doc} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
+      allow read, create: if true;
       allow update, delete: if false;
     }
   }

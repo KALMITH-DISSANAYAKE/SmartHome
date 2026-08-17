@@ -11,6 +11,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.smarthome.data.model.Device
 import com.example.smarthome.data.model.DeviceType
+import com.example.smarthome.ui.components.TimeSelector
+import com.example.smarthome.ui.components.DurationSelector
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,11 +29,14 @@ fun AddDeviceSheet(
     var y by remember { mutableStateOf(initialY.toString()) }
 
     var switchCount by remember { mutableStateOf("2") }
-    var maxDuration by remember { mutableStateOf("30") }
+    var maxDuration by remember { mutableStateOf(30) }
     var scheduleOn by remember { mutableStateOf("") }
     var scheduleOff by remember { mutableStateOf("") }
-    var powerRating by remember { mutableStateOf("0") }
+    var powerRating by remember { mutableStateOf("") }
     var cameraUri by remember { mutableStateOf("") }
+    
+    var showError by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -91,28 +96,33 @@ fun AddDeviceSheet(
                     )
                 }
                 DeviceType.IRON -> {
-                    OutlinedTextField(
-                        value = maxDuration,
-                        onValueChange = { maxDuration = it },
-                        label = { Text("Max On Duration (minutes)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        DurationSelector(
+                            label = "Max On Duration",
+                            durationMinutes = maxDuration,
+                            onDurationSelected = { maxDuration = it },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
                 DeviceType.LIGHT -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(
-                            value = scheduleOn,
-                            onValueChange = { scheduleOn = it },
-                            label = { Text("Auto ON (HH:mm)") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = scheduleOff,
-                            onValueChange = { scheduleOff = it },
-                            label = { Text("Auto OFF (HH:mm)") },
-                            modifier = Modifier.weight(1f)
-                        )
+                        Box(modifier = Modifier.weight(1f)) {
+                            TimeSelector(
+                                label = "Auto ON (HH:mm)",
+                                time = scheduleOn,
+                                onTimeSelected = { scheduleOn = it },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            TimeSelector(
+                                label = "Auto OFF (HH:mm)",
+                                time = scheduleOff,
+                                onTimeSelected = { scheduleOff = it },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
                 DeviceType.CAMERA -> {
@@ -128,11 +138,23 @@ fun AddDeviceSheet(
 
             OutlinedTextField(
                 value = powerRating,
-                onValueChange = { powerRating = it },
+                onValueChange = { 
+                    powerRating = it
+                    showError = false 
+                },
                 label = { Text("Power Rating (Watts)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                isError = showError,
                 modifier = Modifier.fillMaxWidth()
             )
+            
+            if (showError) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -146,6 +168,13 @@ fun AddDeviceSheet(
                 }
                 Button(
                     onClick = {
+                        val power = powerRating.toDoubleOrNull() ?: 0.0
+                        if (power <= 0.0) {
+                            showError = true
+                            errorMessage = "Power rating must be greater than 0"
+                            return@Button
+                        }
+                        
                         val count = switchCount.toIntOrNull() ?: 2
                         val device = Device(
                             floorPlanId = floorPlanId,
@@ -155,11 +184,11 @@ fun AddDeviceSheet(
                             y = y.toIntOrNull() ?: initialY,
                             switchCount = if (selectedType == DeviceType.MULTI_SWITCH) count else 1,
                             switchStates = if (selectedType == DeviceType.MULTI_SWITCH) List(count) { false } else emptyList(),
-                            maxOnDuration = if (selectedType == DeviceType.IRON) maxDuration.toIntOrNull() ?: 30 else 0,
+                            maxOnDuration = if (selectedType == DeviceType.IRON) maxDuration else 0,
                             scheduleOnTime = if (selectedType == DeviceType.LIGHT) scheduleOn.takeIf { it.isNotBlank() } else null,
                             scheduleOffTime = if (selectedType == DeviceType.LIGHT) scheduleOff.takeIf { it.isNotBlank() } else null,
                             cameraMockUri = if (selectedType == DeviceType.CAMERA) cameraUri.takeIf { it.isNotBlank() } else null,
-                            powerRating = powerRating.toDoubleOrNull() ?: 0.0
+                            powerRating = power
                         )
                         onAdd(device)
                     },

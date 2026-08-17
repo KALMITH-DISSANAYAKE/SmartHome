@@ -11,16 +11,21 @@ import com.example.smarthome.data.repository.DeviceRepository
 import com.example.smarthome.data.repository.FloorPlanRepository
 import com.example.smarthome.data.repository.UsageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.content.Context
+import com.example.smarthome.data.model.DeviceType
+import com.example.smarthome.util.AlarmScheduler
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val floorPlanRepository: FloorPlanRepository,
     private val deviceRepository: DeviceRepository,
-    private val usageRepository: UsageRepository
+    private val usageRepository: UsageRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val floorPlanId: String = savedStateHandle.get<String>("floorPlanId") ?: ""
@@ -46,10 +51,20 @@ class DashboardViewModel @Inject constructor(
     fun addDevice(device: Device) {
         viewModelScope.launch {
             val newDevice = device.copy(floorPlanId = floorPlanId)
-            deviceRepository.addDevice(newDevice)
+            val newId = deviceRepository.addDevice(newDevice)
+            
+            if (newDevice.type == DeviceType.LIGHT) {
+                if (!newDevice.scheduleOnTime.isNullOrBlank()) {
+                    AlarmScheduler.scheduleLightAlarm(context, newId, newDevice.scheduleOnTime, true)
+                }
+                if (!newDevice.scheduleOffTime.isNullOrBlank()) {
+                    AlarmScheduler.scheduleLightAlarm(context, newId, newDevice.scheduleOffTime, false)
+                }
+            }
+            
             usageRepository.logUsage(
                 UsageLog(
-                    deviceId = newDevice.id,
+                    deviceId = newId,
                     deviceName = newDevice.name,
                     action = "ADDED",
                     details = "Added ${newDevice.type} at (${newDevice.x}, ${newDevice.y})"
@@ -61,6 +76,15 @@ class DashboardViewModel @Inject constructor(
     fun toggleDevice(device: Device) {
         viewModelScope.launch {
             deviceRepository.toggleDevice(device.id, device.status)
+            
+            if (device.type == DeviceType.IRON) {
+                if (device.status == DeviceStatus.OFF) { // About to turn ON
+                    AlarmScheduler.scheduleIronCutoff(context, device.id, device.name, device.maxOnDuration)
+                } else { // About to turn OFF
+                    AlarmScheduler.cancelIronCutoff(context, device.id)
+                }
+            }
+            
             val action = if (device.status == DeviceStatus.ON) "TURNED_OFF" else "TURNED_ON"
             usageRepository.logUsage(
                 UsageLog(

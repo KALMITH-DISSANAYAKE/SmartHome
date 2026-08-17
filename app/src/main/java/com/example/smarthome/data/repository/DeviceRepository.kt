@@ -39,8 +39,8 @@ class DeviceRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    suspend fun addDevice(device: Device) {
-        firestore.collection("devices").add(device).await()
+    suspend fun addDevice(device: Device): String {
+        return firestore.collection("devices").add(device).await().id
     }
 
     suspend fun deleteDevice(deviceId: String) {
