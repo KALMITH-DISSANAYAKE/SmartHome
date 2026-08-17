@@ -6,86 +6,321 @@
     <title>Smart Home Hardware Simulator</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
-            padding: 24px;
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(22, 28, 45, 0.6);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-glow: rgba(56, 189, 248, 0.15);
+            --color-on: #10b981;
+            --color-on-glow: rgba(16, 185, 129, 0.3);
+            --color-off: #475569;
+            --color-error: #ef4444;
+            --color-warning: #f59e0b;
         }
-        h1 { margin-bottom: 24px; color: #38bdf8; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(56, 189, 248, 0.04), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.04), transparent 25%);
+            color: var(--text-primary);
+            padding: 40px;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        h1 { 
+            font-size: 28px;
+            font-weight: 600;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .status-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+        }
+
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 24px;
         }
+
         .device-card {
-            background: #1e293b;
-            border-radius: 12px;
-            padding: 20px;
-            border: 2px solid #334155;
-            transition: all 0.3s;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--card-border);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
-        .device-card.on { border-color: #22c55e; box-shadow: 0 0 20px rgba(34,197,94,0.2); }
-        .device-card.off { border-color: #64748b; }
-        .device-card.error { border-color: #ef4444; animation: pulse 1.5s infinite; }
-        .device-card.disconnected { border-color: #f59e0b; opacity: 0.7; }
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+        .device-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: var(--color-off);
+            transition: all 0.4s ease;
+        }
+
+        .device-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .device-card.on {
+            box-shadow: 0 8px 32px var(--color-on-glow);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .device-card.on::before {
+            background: var(--color-on);
+            box-shadow: 0 0 15px var(--color-on);
+        }
+
+        .device-card.error::before { background: var(--color-error); }
+        .device-card.disconnected::before { background: var(--color-warning); }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .icon-container {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .on .icon-container {
+            background: rgba(16, 185, 129, 0.15);
+            transform: scale(1.05);
+        }
+
         .status-dot {
-            width: 12px; height: 12px; border-radius: 50%;
-            position: absolute; top: 12px; right: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(71, 85, 105, 0.3);
+            color: var(--text-secondary);
         }
-        .on .status-dot { background: #22c55e; }
-        .off .status-dot { background: #64748b; }
-        .error .status-dot { background: #ef4444; }
-        .disconnected .status-dot { background: #f59e0b; }
-        .type-icon { font-size: 32px; margin-bottom: 8px; }
-        .device-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-        .device-meta { font-size: 12px; color: #94a3b8; }
+
+        .on .status-dot {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--color-on);
+        }
+
+        .device-name {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+        }
+
+        .device-meta {
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .power-bar {
-            height: 4px; background: #334155; border-radius: 2px;
-            margin-top: 12px; overflow: hidden;
+            height: 6px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 3px;
+            margin-top: 20px;
+            overflow: hidden;
+            position: relative;
         }
+
         .power-fill {
-            height: 100%; background: #38bdf8; border-radius: 2px;
-            transition: width 0.5s;
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
         }
-        .switches { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        
+        .on .power-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .extras { margin-top: 16px; }
+
+        .switches { display: flex; gap: 8px; flex-wrap: wrap; }
         .switch-pill {
-            padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
-            background: #334155; color: #94a3b8;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            transition: all 0.2s;
         }
-        .switch-pill.active { background: #22c55e; color: #fff; }
+        .switch-pill.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--color-on);
+            box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.3);
+        }
+
         .timer {
-            margin-top: 8px; font-size: 12px;
-            font-family: monospace; color: #f87171;
+            font-size: 13px;
+            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.1);
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
         }
+
+        .camera-feed {
+            padding: 10px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            border: 1px dashed rgba(255,255,255,0.1);
+        }
+
         .log {
-            margin-top: 24px; padding: 16px; background: #1e293b;
-            border-radius: 8px; max-height: 200px; overflow-y: auto;
-            font-family: monospace; font-size: 12px; color: #94a3b8;
+            margin-top: 40px;
+            padding: 24px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+            max-height: 250px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text-secondary);
         }
-        .log-entry { margin-bottom: 4px; padding: 2px 0; border-bottom: 1px solid #334155; }
+
+        .log-header {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .log-entry { 
+            margin-bottom: 8px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            gap: 12px;
+        }
+        .log-time { color: #818cf8; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
     </style>
 </head>
 <body>
-    <h1>Smart Home Hardware Simulator</h1>
+    <div class="header">
+        <h1>Smart Home Hardware Simulator</h1>
+        <div class="status-badge">System Active</div>
+    </div>
+    
     <div class="grid" id="deviceGrid"></div>
-    <div class="log" id="eventLog"><div class="log-entry">Waiting for Firestore...</div></div>
+    
+    <div class="log" id="eventLog">
+        <div class="log-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+            System Logs
+        </div>
+        <div class="log-entry"><span class="log-time">[Init]</span> Waiting for Firestore connection...</div>
+    </div>
 
     <script>
         // REPLACE WITH YOUR FIREBASE CONFIG
-      const firebaseConfig = {
-          apiKey: "AIzaSyA9oFs5cenD8HxafvX_UUEIcBCwdpGIi7s",
-          authDomain: "smarthome-demo-24bb3.firebaseapp.com",
-          projectId: "smarthome-demo-24bb3",
-          storageBucket: "smarthome-demo-24bb3.firebasestorage.app",
-          messagingSenderId: "189831222116",
-          appId: "1:189831222116:web:11b3ba2ba0882cdf6f2071",
-          measurementId: "G-VRCE5T7FLW"
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9oFs5cenD8HxafvX_UUEIcBCwdpGIi7s",
+            authDomain: "smarthome-demo-24bb3.firebaseapp.com",
+            projectId: "smarthome-demo-24bb3",
+            storageBucket: "smarthome-demo-24bb3.firebasestorage.app",
+            messagingSenderId: "189831222116",
+            appId: "1:189831222116:web:11b3ba2ba0882cdf6f2071",
+            measurementId: "G-VRCE5T7FLW"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
@@ -97,9 +332,14 @@
         function addLog(msg) {
             const div = document.createElement('div');
             div.className = 'log-entry';
-            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-            log.prepend(div);
-            if (log.children.length > 50) log.lastChild.remove();
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            div.innerHTML = `<span class="log-time">[${time}]</span> <span>${msg}</span>`;
+            
+            // Insert after the header
+            const header = log.querySelector('.log-header');
+            header.insertAdjacentElement('afterend', div);
+            
+            if (log.children.length > 51) log.lastElementChild.remove();
         }
 
         function renderDevice(doc) {
@@ -108,14 +348,14 @@
             const status = d.status?.toLowerCase() || 'off';
             const prev = devicesMap.get(id);
             if (prev && prev.status !== status) {
-                addLog(`${d.name}: ${prev.status} → ${status.toUpperCase()}`);
+                addLog(`<strong>${d.name}</strong> status changed: ${prev.status.toUpperCase()} → ${status.toUpperCase()}`);
             }
             devicesMap.set(id, { status, data: d });
 
             let switchesHtml = '';
             if (d.type === 'MULTI_SWITCH' && d.switchStates) {
-                switchesHtml = '<div class="switches">' + d.switchStates.map((s, i) =>
-                    `<span class="switch-pill ${s ? 'active' : ''}">S${i+1}</span>`
+                switchesHtml = '<div class="extras switches">' + d.switchStates.map((s, i) =>
+                    `<span class="switch-pill ${s ? 'active' : ''}">Switch ${i+1}</span>`
                 ).join('') + '</div>';
             }
 
@@ -123,13 +363,24 @@
             if (d.type === 'IRON' && status === 'on' && d.currentSessionStart) {
                 const elapsed = Math.floor((Date.now() - d.currentSessionStart) / 60000);
                 const remaining = (d.maxOnDuration || 30) - elapsed;
-                timerHtml = `<div class="timer" id="timer-${id}">⏱ ${elapsed}m elapsed | ${remaining}m remaining</div>`;
+                timerHtml = `<div class="extras timer" id="timer-${id}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    ${elapsed}m / ${d.maxOnDuration || 30}m
+                </div>`;
+            }
+            
+            let lightScheduleHtml = '';
+            if (d.type === 'LIGHT' && (d.scheduleOnTime || d.scheduleOffTime)) {
+                lightScheduleHtml = `<div class="extras" style="font-size: 12px; color: var(--text-secondary); display: flex; justify-content: space-between;">
+                    <span>ON: ${d.scheduleOnTime || '--:--'}</span>
+                    <span>OFF: ${d.scheduleOffTime || '--:--'}</span>
+                </div>`;
             }
 
             let cameraHtml = '';
             if (d.type === 'CAMERA') {
-                cameraHtml = `<div style="margin-top:8px;padding:8px;background:#0f172a;border-radius:6px;text-align:center;font-size:11px;color:#64748b;">
-                    ${d.cameraMockUri ? '📡 ' + d.cameraMockUri : 'No Signal'}
+                cameraHtml = `<div class="extras camera-feed">
+                    ${d.cameraMockUri ? '📡 ' + d.cameraMockUri : 'No Signal Available'}
                 </div>`;
             }
 
@@ -141,13 +392,20 @@
             const card = document.createElement('div');
             card.className = `device-card ${status}`;
             card.innerHTML = `
-                <div class="status-dot"></div>
-                <div class="type-icon">${icons[d.type] || '⚡'}</div>
-                <div class="device-name">${d.name || 'Unnamed'}</div>
-                <div class="device-meta">${d.type} • (${d.x}, ${d.y}) • ${d.powerRating || 0}W</div>
+                <div class="card-header">
+                    <div class="icon-container">${icons[d.type] || '⚡'}</div>
+                    <div class="status-dot">${status}</div>
+                </div>
+                <div class="device-name">${d.name || 'Unnamed Device'}</div>
+                <div class="device-meta">
+                    <span>${(d.type || 'UNKNOWN').replace('_', ' ')}</span>
+                    <span>•</span>
+                    <span>${d.powerRating || 0}W</span>
+                </div>
                 <div class="power-bar"><div class="power-fill" style="width:${status==='on'? '100%' : '0%'}"></div></div>
                 ${switchesHtml}
                 ${timerHtml}
+                ${lightScheduleHtml}
                 ${cameraHtml}
             `;
 
@@ -161,59 +419,93 @@
             const el = document.getElementById('dev-' + id);
             if (el) el.remove();
             devicesMap.delete(id);
-            addLog(`Device ${id} removed`);
+            addLog(`Device ${id} removed from network`);
         }
 
         db.collection('devices').onSnapshot(snapshot => {
+            // Remove the waiting message on first successful snapshot
+            const waitingLog = Array.from(log.querySelectorAll('.log-entry')).find(el => el.textContent.includes('Waiting for Firestore'));
+            if (waitingLog) {
+                waitingLog.remove();
+                addLog('Connected to Firestore - Watching for device changes');
+            }
+
             snapshot.docChanges().forEach(change => {
                 if (change.type === 'removed') removeDevice(change.doc.id);
                 else renderDevice(change.doc);
             });
+        }, error => {
+            console.error("Firestore Error:", error);
+            addLog(`<span style="color: var(--color-error)">❌ Firestore Error: ${error.message}</span>`);
         });
 
-        // FREE TIER SAFETY GUARD: Runs every 10 seconds in the browser
+        // TIME UTILS
+        function getSriLankanTimeStr() {
+            const now = new Date();
+            const options = { timeZone: 'Asia/Colombo', hour: '2-digit', minute: '2-digit', hour12: false };
+            return new Intl.DateTimeFormat('en-US', options).format(now);
+        }
+
+        // HARDWARE CONTROLLER LOOP: Runs every 10 seconds
         setInterval(async () => {
             const now = Date.now();
+            const currentColomboTime = getSriLankanTimeStr();
+
             for (const [id, entry] of devicesMap) {
                 const d = entry.data;
                 const type = (d.type || "").toUpperCase();
                 const status = (d.status || "").toUpperCase();
 
+                // 1. Iron Safety Guard
                 if (type === 'IRON' && status === 'ON' && d.currentSessionStart) {
                     const elapsedMin = (now - d.currentSessionStart) / 60000;
                     const max = d.maxOnDuration || 30;
 
-                    console.log(`[Safety Guard] Checking ${d.name}: ${elapsedMin.toFixed(2)}m / ${max}m`);
-
                     if (elapsedMin >= max) {
-                        console.log(`[Safety Guard] CUTOFF TRIGGERED for ${d.name}`);
                         addLog(`⚠️ SAFETY GUARD: ${d.name} exceeded ${max}m. Auto-shutting off...`);
-
                         try {
-                            // Update device status
                             await db.collection('devices').doc(id).update({
                                 status: 'OFF',
                                 currentSessionStart: null,
                                 lastUpdated: now
                             });
-
-                            // Log to usage logs
                             await db.collection('usageLogs').add({
                                 deviceId: id,
                                 deviceName: d.name,
                                 action: 'SAFETY_CUTOFF',
                                 timestamp: now,
-                                details: `Auto-turned OFF by Simulator after ${Math.floor(elapsedMin)} min`
+                                details: `Auto-turned OFF by Simulator Hardware Guard after ${Math.floor(elapsedMin)} min`
                             });
-                        } catch (e) {
-                            console.error("Safety guard error:", e);
-                        }
+                        } catch (e) { console.error(e); }
+                    }
+                }
+
+                // 2. Light Scheduling (Hardware level fail-safe)
+                if (type === 'LIGHT') {
+                    if (d.scheduleOnTime && d.scheduleOnTime === currentColomboTime && status !== 'ON') {
+                        addLog(`⏰ SCHEDULE: Turning ON ${d.name} at ${currentColomboTime}`);
+                        try {
+                            await db.collection('devices').doc(id).update({
+                                status: 'ON',
+                                lastUpdated: now,
+                                currentSessionStart: now
+                            });
+                        } catch (e) { console.error(e); }
+                    } else if (d.scheduleOffTime && d.scheduleOffTime === currentColomboTime && status !== 'OFF') {
+                        addLog(`⏰ SCHEDULE: Turning OFF ${d.name} at ${currentColomboTime}`);
+                        try {
+                            await db.collection('devices').doc(id).update({
+                                status: 'OFF',
+                                lastUpdated: now,
+                                currentSessionStart: null
+                            });
+                        } catch (e) { console.error(e); }
                     }
                 }
             }
         }, 10000);
 
-        addLog('Simulator connected to Firestore (Free Tier Safety Active)');
+        addLog('Simulator Hardware connected (Safety Guard & Scheduler Active)');
 
         // UI TIMER UPDATE: Refresh timer displays every 5 seconds
         setInterval(() => {
@@ -230,7 +522,8 @@
                     const remainingMin = Math.floor(remainingTotalSec / 60);
                     const remainingSec = remainingTotalSec % 60;
 
-                    timerEl.textContent = `⏱ ${elapsedMin}m ${secRemainder}s elapsed | ${remainingMin}m ${remainingSec}s left`;
+                    timerEl.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                         ${elapsedMin}m ${secRemainder}s / ${d.maxOnDuration || 30}m`;
                     if (elapsedSec >= maxSec) timerEl.style.color = '#ef4444';
                 }
             }
