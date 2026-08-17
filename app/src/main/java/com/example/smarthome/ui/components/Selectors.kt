@@ -41,9 +41,14 @@ fun TimeSelector(
             label = { Text(label) },
             readOnly = true,
             trailingIcon = {
-                Icon(Icons.Default.AccessTime, contentDescription = "Select Time")
+                Icon(Icons.Default.AccessTime, contentDescription = "Select Time", tint = com.example.smarthome.ui.theme.PrimaryBlue)
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = com.example.smarthome.ui.theme.PrimaryBlue,
+                unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedLabelColor = com.example.smarthome.ui.theme.PrimaryBlue
+            )
         )
         
         // Transparent box over text field to intercept clicks reliably
@@ -100,9 +105,14 @@ fun DurationSelector(
             label = { Text(label) },
             readOnly = true,
             trailingIcon = {
-                Icon(Icons.Default.Timer, contentDescription = "Select Duration")
+                Icon(Icons.Default.Timer, contentDescription = "Select Duration", tint = com.example.smarthome.ui.theme.PrimaryBlue)
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = com.example.smarthome.ui.theme.PrimaryBlue,
+                unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedLabelColor = com.example.smarthome.ui.theme.PrimaryBlue
+            )
         )
 
         Box(

@@ -84,8 +84,21 @@ class DeviceRepository @Inject constructor(
         val states = (doc.get("switchStates") as? List<*>)?.map { it as? Boolean ?: false }?.toMutableList() ?: return
         if (switchIndex < states.size) {
             states[switchIndex] = state
-            firestore.collection("devices").document(deviceId)
-                .update("switchStates", states, "lastUpdated", System.currentTimeMillis()).await()
+            
+            val updates = mutableMapOf<String, Any>(
+                "switchStates" to states,
+                "lastUpdated" to System.currentTimeMillis()
+            )
+            
+            // If all switches are off, turn off the main device status
+            if (states.none { it }) {
+                updates["status"] = DeviceStatus.OFF.name
+            } else if (state) {
+                // If a switch is turned on, ensure the main device status is on
+                updates["status"] = DeviceStatus.ON.name
+            }
+
+            firestore.collection("devices").document(deviceId).update(updates).await()
         }
     }
 

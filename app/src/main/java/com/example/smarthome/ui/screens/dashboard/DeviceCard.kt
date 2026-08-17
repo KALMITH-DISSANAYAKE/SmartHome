@@ -50,7 +50,7 @@ fun DeviceCard(
                 .border(1.5.dp, statusColor, RoundedCornerShape(4.dp))
                 .clip(RoundedCornerShape(4.dp))
                 .background(statusColor.copy(alpha = 0.15f))
-                .clickable { onToggle() },
+                .let { if (device.type != DeviceType.MULTI_SWITCH) it.clickable { onToggle() } else it },
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -99,7 +99,7 @@ fun DeviceCard(
         Card(
             modifier = modifier
                 .fillMaxWidth()
-                .clickable { onToggle() },
+                .let { if (device.type != DeviceType.MULTI_SWITCH) it.clickable { onToggle() } else it },
             colors = CardDefaults.cardColors(
                 containerColor = statusColor.copy(alpha = 0.08f)
             ),

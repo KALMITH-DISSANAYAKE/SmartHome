@@ -41,8 +41,12 @@ fun SmartHomeNavGraph(navController: NavHostController = rememberNavController()
         composable(
             route = Screen.DeviceDetail.route,
             arguments = listOf(navArgument("deviceId") { type = NavType.StringType })
-        ) {
-            DeviceDetailScreen(onBack = { navController.popBackStack() })
+        ) { backStackEntry ->
+            val deviceId = backStackEntry.arguments?.getString("deviceId") ?: ""
+            DeviceDetailScreen(
+                deviceId = deviceId,
+                onBack = { navController.popBackStack() }
+            )
         }
         composable(Screen.Reports.route) {
             ReportsScreen(onBack = { navController.popBackStack() })

@@ -30,6 +30,14 @@ class DeviceDetailViewModel @Inject constructor(
     val device: StateFlow<Device?> = deviceRepository.getDeviceById(deviceId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val usageLogs: StateFlow<List<UsageLog>> = usageRepository.getUsageLogs()
+        .map { logs -> logs.filter { it.deviceId == deviceId } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun loadDevice(id: String) {
+        // Device is already loaded via SavedStateHandle, but kept for compatibility
+    }
+
     fun toggleDevice() {
         viewModelScope.launch {
             val current = device.value ?: return@launch
@@ -71,6 +79,16 @@ class DeviceDetailViewModel @Inject constructor(
     fun updateMaxDuration(minutes: Int) {
         viewModelScope.launch {
             deviceRepository.updateDeviceField(deviceId, "maxOnDuration", minutes)
+        }
+    }
+
+    fun updateIronDuration(minutes: Int) {
+        updateMaxDuration(minutes)
+    }
+
+    fun updateSwitch(index: Int, state: Boolean) {
+        viewModelScope.launch {
+            deviceRepository.updateSwitchState(deviceId, index, !state)
         }
     }
 
